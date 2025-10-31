@@ -247,6 +247,179 @@ class Database:
             )
         ''')
         
+        # Users and authentication
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                full_name TEXT,
+                email TEXT,
+                phone TEXT,
+                role TEXT DEFAULT 'employee',
+                is_active INTEGER DEFAULT 1,
+                created_date TEXT,
+                last_login TEXT
+            )
+        ''')
+        
+        # Settings
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT,
+                category TEXT,
+                description TEXT
+            )
+        ''')
+        
+        # Inventory management
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                category TEXT,
+                section TEXT,
+                sku TEXT UNIQUE,
+                quantity REAL DEFAULT 0,
+                unit TEXT,
+                reorder_level REAL,
+                unit_cost REAL,
+                selling_price REAL,
+                supplier_id INTEGER,
+                last_updated TEXT,
+                FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+            )
+        ''')
+        
+        # Suppliers
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                contact_person TEXT,
+                phone TEXT,
+                email TEXT,
+                address TEXT,
+                notes TEXT,
+                is_active INTEGER DEFAULT 1
+            )
+        ''')
+        
+        # Purchase orders
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS purchase_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id INTEGER,
+                order_date TEXT,
+                delivery_date TEXT,
+                total_amount REAL,
+                status TEXT DEFAULT 'pending',
+                notes TEXT,
+                FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+            )
+        ''')
+        
+        # Purchase order items
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS purchase_order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                purchase_order_id INTEGER,
+                inventory_item_id INTEGER,
+                quantity REAL,
+                unit_cost REAL,
+                total_cost REAL,
+                FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
+                FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id)
+            )
+        ''')
+        
+        # Expenses
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT,
+                description TEXT,
+                amount REAL,
+                expense_date TEXT,
+                payment_method TEXT,
+                receipt_number TEXT,
+                notes TEXT
+            )
+        ''')
+        
+        # Loyalty rewards
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS loyalty_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER,
+                transaction_type TEXT,
+                points INTEGER,
+                description TEXT,
+                transaction_date TEXT,
+                invoice_id INTEGER,
+                FOREIGN KEY (customer_id) REFERENCES customers(id)
+            )
+        ''')
+        
+        # SMS history
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sms_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER,
+                phone_number TEXT,
+                message TEXT,
+                sms_type TEXT,
+                status TEXT DEFAULT 'pending',
+                sent_date TEXT,
+                delivery_status TEXT,
+                error_message TEXT,
+                FOREIGN KEY (customer_id) REFERENCES customers(id)
+            )
+        ''')
+        
+        # Notifications
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                title TEXT,
+                message TEXT,
+                notification_type TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_date TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
+        # Backup history
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS backup_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                backup_date TEXT,
+                backup_path TEXT,
+                backup_size INTEGER,
+                status TEXT,
+                notes TEXT
+            )
+        ''')
+        
+        # Payment gateway transactions
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS payment_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id INTEGER,
+                transaction_id TEXT,
+                gateway TEXT,
+                amount REAL,
+                status TEXT,
+                transaction_date TEXT,
+                notes TEXT,
+                FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+            )
+        ''')
+        
         self.conn.commit()
     
     def execute(self, query, params=()):
@@ -268,6 +441,51 @@ class Database:
     def close(self):
         """Close database connection"""
         self.conn.close()
+    
+    def initialize_defaults(self):
+        """Initialize default users and settings"""
+        import hashlib
+        
+        # Check if admin user exists
+        admin = self.fetchone("SELECT * FROM users WHERE username = 'admin'")
+        if not admin:
+            # Create default admin user
+            password_hash = hashlib.sha256('admin123'.encode()).hexdigest()
+            self.execute(
+                """INSERT INTO users (username, password_hash, full_name, role, created_date)
+                   VALUES (?, ?, ?, ?, ?)""",
+                ('admin', password_hash, 'Administrator', 'admin', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            )
+        
+        # Initialize default settings
+        default_settings = [
+            ('theme', 'dark', 'appearance', 'Application theme'),
+            ('language', 'fa', 'appearance', 'Interface language (fa/en)'),
+            ('font_family', 'Vazir', 'appearance', 'Font family'),
+            ('currency', 'Toman', 'business', 'Default currency'),
+            ('tax_rate', '9', 'business', 'Tax rate percentage'),
+            ('business_hours', '09:00-22:00', 'business', 'Business hours'),
+            ('contact_phone', '', 'business', 'Contact phone number'),
+            ('contact_email', '', 'business', 'Contact email'),
+            ('sms_api_key', '', 'sms', 'SMS gateway API key'),
+            ('sms_api_secret', '', 'sms', 'SMS gateway API secret'),
+            ('sms_provider', 'none', 'sms', 'SMS provider (twilio/kavenegar/none)'),
+            ('backup_path', './backups', 'system', 'Database backup directory'),
+            ('auto_backup', '1', 'system', 'Enable automatic backups'),
+            ('backup_frequency', 'daily', 'system', 'Backup frequency'),
+            ('loyalty_points_rate', '1', 'loyalty', 'Points per dollar spent'),
+            ('loyalty_redemption_rate', '100', 'loyalty', 'Points needed for $1 discount'),
+        ]
+        
+        for key, value, category, description in default_settings:
+            existing = self.fetchone("SELECT * FROM settings WHERE key = ?", (key,))
+            if not existing:
+                self.execute(
+                    """INSERT INTO settings (key, value, category, description)
+                       VALUES (?, ?, ?, ?)""",
+                    (key, value, category, description)
+                )
 
 # Global database instance
 db = Database()
+db.initialize_defaults()

@@ -9,12 +9,17 @@ A comprehensive management system integrating:
 - Gamnet (Gaming Net)
 
 Features unified invoicing, employee management, customer relationship management,
-campaigns, and comprehensive reporting.
+campaigns, comprehensive reporting, Persian RTL support, SMS panel, inventory management,
+supplier management, expense tracking, and multi-user authentication.
 """
 
 import customtkinter as ctk
 from ui_utils import *
 from database import db
+from translations import tr, translator
+
+# Import authentication
+from auth import LoginScreen, session
 
 # Import all sections
 from salon_section import SalonSection
@@ -25,17 +30,32 @@ from customer_section import CustomerSection
 from invoice_section import InvoiceSection
 from campaign_section import CampaignSection
 from reports_section import ReportsSection
+from settings_section import SettingsSection
+from sms_section import SMSSection
+from inventory_section import InventorySection
+from supplier_expense_section import SupplierSection, ExpenseSection
 
 class KaganManagementApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
+        # Show login screen first
+        self.withdraw()  # Hide main window
+        login = LoginScreen(self, self.on_login_success)
+        self.wait_window(login)
+        
+        # Check if user logged in
+        if not session.get_user():
+            self.destroy()
+            return
+        
         # Configure window
-        self.title("Kagan Collection Management System")
+        self.title(tr('app_title'))
         self.geometry("1400x900")
         
-        # Set theme
-        ctk.set_appearance_mode("dark")
+        # Set theme from settings
+        theme = self.get_setting('theme', 'dark')
+        ctk.set_appearance_mode(theme)
         ctk.set_default_color_theme("blue")
         
         # Configure grid
@@ -47,31 +67,71 @@ class KaganManagementApp(ctk.CTk):
         
         # Initialize database with sample data
         self.init_sample_data()
+        
+        # Show main window
+        self.deiconify()
+    
+    def on_login_success(self, user):
+        """Handle successful login"""
+        session.set_user(user)
+    
+    def get_setting(self, key, default=''):
+        """Get setting from database"""
+        try:
+            result = db.fetchone("SELECT value FROM settings WHERE key = ?", (key,))
+            return result['value'] if result else default
+        except:
+            return default
     
     def setup_ui(self):
         """Setup the main user interface"""
         # Sidebar navigation
-        self.sidebar = GlassFrame(self, width=200)
-        self.sidebar.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        sidebar_width = 220
+        self.sidebar = GlassFrame(self, width=sidebar_width)
+        
+        # RTL support: place sidebar on right if Persian
+        if translator.is_rtl():
+            self.sidebar.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+            self.grid_columnconfigure(0, weight=1)
+            self.grid_columnconfigure(1, weight=0)
+        else:
+            self.sidebar.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+            self.grid_columnconfigure(0, weight=0)
+            self.grid_columnconfigure(1, weight=1)
+        
         self.sidebar.grid_propagate(False)
         
         # Logo/Title
         logo_label = create_title_label(self.sidebar, "Kagan\nCollection")
         logo_label.pack(pady=20)
         
+        # User info
+        user = session.get_user()
+        user_label = GlassLabel(
+            self.sidebar, 
+            text=f"{user['full_name'] or user['username']}\n({user['role']})",
+            font=FONTS['small']
+        )
+        user_label.pack(pady=5)
+        
         # Navigation buttons
         self.nav_buttons = {}
         
         nav_items = [
-            ("Dashboard", self.show_dashboard),
-            ("Salon", self.show_salon),
-            ("Cafe Bar", self.show_cafe),
-            ("Gamnet", self.show_gamnet),
-            ("Invoices", self.show_invoices),
-            ("Employees", self.show_employees),
-            ("Customers", self.show_customers),
-            ("Campaigns", self.show_campaigns),
-            ("Reports", self.show_reports),
+            (tr('dashboard'), self.show_dashboard),
+            (tr('salon'), self.show_salon),
+            (tr('cafe_bar'), self.show_cafe),
+            (tr('gamnet'), self.show_gamnet),
+            (tr('invoices'), self.show_invoices),
+            (tr('employees'), self.show_employees),
+            (tr('customers'), self.show_customers),
+            (tr('inventory'), self.show_inventory),
+            (tr('suppliers'), self.show_suppliers),
+            (tr('expenses'), self.show_expenses),
+            (tr('sms_panel'), self.show_sms),
+            (tr('campaigns'), self.show_campaigns),
+            (tr('reports'), self.show_reports),
+            (tr('settings'), self.show_settings),
         ]
         
         for text, command in nav_items:
@@ -79,15 +139,32 @@ class KaganManagementApp(ctk.CTk):
                 self.sidebar,
                 text=text,
                 command=command,
-                width=180,
-                height=40
+                width=200,
+                height=35,
+                anchor="center"
             )
-            btn.pack(pady=5, padx=10)
+            btn.pack(pady=3, padx=10)
             self.nav_buttons[text] = btn
+        
+        # Logout button
+        logout_btn = GlassButton(
+            self.sidebar,
+            text=tr('logout'),
+            command=self.logout,
+            width=200,
+            height=35,
+            fg_color=COLORS['error']
+        )
+        logout_btn.pack(side='bottom', pady=10, padx=10)
         
         # Main content area
         self.content_frame = GlassFrame(self)
-        self.content_frame.grid(row=0, column=1, sticky="nsew", padx=(0, 10), pady=10)
+        
+        # RTL support: adjust content frame position
+        if translator.is_rtl():
+            self.content_frame.grid(row=0, column=0, sticky="nsew", padx=(10, 0), pady=10)
+        else:
+            self.content_frame.grid(row=0, column=1, sticky="nsew", padx=(0, 10), pady=10)
         
         # Initialize sections (lazy loading)
         self.sections = {}
@@ -95,6 +172,18 @@ class KaganManagementApp(ctk.CTk):
         
         # Show dashboard by default
         self.show_dashboard()
+    
+    def logout(self):
+        """Logout user"""
+        from tkinter import messagebox
+        if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
+            session.logout()
+            self.destroy()
+            # Restart application
+            import sys
+            import os
+            python = sys.executable
+            os.execl(python, python, *sys.argv)
     
     def hide_current_section(self):
         """Hide the current section"""
@@ -121,7 +210,7 @@ class KaganManagementApp(ctk.CTk):
             dashboard = GlassScrollableFrame(self.content_frame)
             
             # Header
-            header = create_section_header(dashboard, "Dashboard - Overview")
+            header = create_section_header(dashboard, tr('dashboard_overview'))
             header.pack(fill='x', padx=10, pady=10)
             
             # Quick stats
@@ -130,10 +219,10 @@ class KaganManagementApp(ctk.CTk):
             
             # Create stat cards
             stat_cards = [
-                ("Today's Revenue", self.get_today_revenue()),
-                ("Active Customers", self.get_active_customers()),
-                ("Pending Appointments", self.get_pending_appointments()),
-                ("Active Sessions", self.get_active_sessions()),
+                (tr('today_revenue'), self.get_today_revenue()),
+                (tr('active_customers'), self.get_active_customers()),
+                (tr('pending_appointments'), self.get_pending_appointments()),
+                (tr('active_sessions'), self.get_active_sessions()),
             ]
             
             for i, (title, value) in enumerate(stat_cards):
@@ -150,13 +239,13 @@ class KaganManagementApp(ctk.CTk):
             actions_frame = GlassFrame(dashboard)
             actions_frame.pack(fill='x', padx=10, pady=20)
             
-            GlassLabel(actions_frame, text="Quick Actions", font=FONTS['heading']).pack(pady=10)
+            GlassLabel(actions_frame, text=tr('quick_actions'), font=FONTS['heading']).pack(pady=10)
             
             actions = [
-                ("New Customer", self.show_customers),
-                ("Create Invoice", self.show_invoices),
-                ("Book Appointment", self.show_salon),
-                ("Start Gaming Session", self.show_gamnet),
+                (tr('new_customer'), self.show_customers),
+                (tr('create_invoice'), self.show_invoices),
+                (tr('book_appointment'), self.show_salon),
+                (tr('start_gaming_session'), self.show_gamnet),
             ]
             
             for text, command in actions:
@@ -166,7 +255,7 @@ class KaganManagementApp(ctk.CTk):
             activity_frame = GlassFrame(dashboard)
             activity_frame.pack(fill='both', expand=True, padx=10, pady=10)
             
-            GlassLabel(activity_frame, text="Recent Activity", font=FONTS['heading']).pack(pady=10)
+            GlassLabel(activity_frame, text=tr('recent_activity'), font=FONTS['heading']).pack(pady=10)
             
             activity_text = ctk.CTkTextbox(
                 activity_frame,
@@ -225,6 +314,26 @@ class KaganManagementApp(ctk.CTk):
     def show_reports(self):
         """Show reports section"""
         self.show_section('reports', ReportsSection)
+    
+    def show_settings(self):
+        """Show settings section"""
+        self.show_section('settings', SettingsSection)
+    
+    def show_sms(self):
+        """Show SMS section"""
+        self.show_section('sms', SMSSection)
+    
+    def show_inventory(self):
+        """Show inventory section"""
+        self.show_section('inventory', InventorySection)
+    
+    def show_suppliers(self):
+        """Show suppliers section"""
+        self.show_section('suppliers', SupplierSection)
+    
+    def show_expenses(self):
+        """Show expenses section"""
+        self.show_section('expenses', ExpenseSection)
     
     def get_today_revenue(self):
         """Get today's total revenue"""
