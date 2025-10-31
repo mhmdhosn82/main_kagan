@@ -27,7 +27,19 @@ COLORS = {
 }
 
 def _set_default_kwargs(kwargs, defaults):
-    """Helper function to set default kwargs only if not already provided"""
+    """
+    Helper function to set default kwargs only if not already provided.
+    
+    Modifies kwargs dictionary in place by adding default values for any
+    keys not already present.
+    
+    Args:
+        kwargs: Dictionary of keyword arguments to modify
+        defaults: Dictionary of default values to apply
+        
+    Returns:
+        The modified kwargs dictionary (same object, modified in place)
+    """
     for key, value in defaults.items():
         if key not in kwargs:
             kwargs[key] = value
@@ -115,14 +127,14 @@ def setup_vazir_font():
                     for font_file in font_files.values():
                         # This helps register the font on some systems
                         ImageFont.truetype(font_file, 12)
-                except (OSError, IOError) as e:
+                except OSError as e:
                     # Font loading failed but we can still try to use the font family name
                     print(f"Note: Could not pre-load font file: {e}")
             
             # For customtkinter, we can use the font family name directly
             # The font will be loaded from the system if registered, or we use the path
             font_family = 'Vazir'
-        except (OSError, IOError) as e:
+        except OSError as e:
             print(f"Warning: Could not load Vazir font: {e}")
             font_family = 'Arial'  # Fallback to Arial
     else:
