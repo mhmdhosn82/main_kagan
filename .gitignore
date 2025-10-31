@@ -54,3 +54,13 @@ Thumbs.db
 # Temporary files
 *.tmp
 /tmp/
+
+# Backups
+backups/
+*.bak
+reports_section.py.bak
+
+# SMS and other generated files
+*.pdf
+*.xlsx
+*.csv
