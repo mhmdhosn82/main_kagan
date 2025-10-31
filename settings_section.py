@@ -163,8 +163,17 @@ class SettingsSection:
         
         GlassLabel(form_frame, text=tr('sms_config'), font=FONTS['heading']).pack(pady=10)
         
+        # Info message
+        info_label = GlassLabel(
+            form_frame,
+            text="⚠️ SMS functionality requires proper API configuration.\nConfigure all fields below before sending any SMS.",
+            font=FONTS['small'],
+            text_color=COLORS['warning']
+        )
+        info_label.pack(pady=5)
+        
         # SMS Provider
-        GlassLabel(form_frame, text="SMS Provider").pack(pady=5)
+        GlassLabel(form_frame, text="SMS Provider *").pack(pady=5)
         provider_var = ctk.StringVar(value=self.get_setting('sms_provider', 'none'))
         provider_menu = ctk.CTkOptionMenu(
             form_frame,
@@ -176,7 +185,7 @@ class SettingsSection:
         provider_menu.pack(pady=5)
         
         # API Key
-        GlassLabel(form_frame, text="API Key").pack(pady=5)
+        GlassLabel(form_frame, text="API Key *").pack(pady=5)
         api_key_entry = GlassEntry(form_frame, width=300)
         api_key_entry.insert(0, self.get_setting('sms_api_key', ''))
         api_key_entry.pack(pady=5)
@@ -187,13 +196,65 @@ class SettingsSection:
         api_secret_entry.insert(0, self.get_setting('sms_api_secret', ''))
         api_secret_entry.pack(pady=5)
         
+        # Sender Number
+        GlassLabel(form_frame, text="Sender Number/ID *").pack(pady=5)
+        sender_entry = GlassEntry(form_frame, width=300)
+        sender_entry.insert(0, self.get_setting('sms_sender_number', ''))
+        sender_entry.pack(pady=5)
+        
+        GlassLabel(
+            form_frame,
+            text="(Your registered sender number or alphanumeric sender ID)",
+            font=FONTS['small']
+        ).pack(pady=2)
+        
         def save_sms():
-            self.save_setting('sms_provider', provider_var.get())
-            self.save_setting('sms_api_key', api_key_entry.get())
-            self.save_setting('sms_api_secret', api_secret_entry.get())
-            messagebox.showinfo("Success", "SMS settings saved successfully!")
+            provider = provider_var.get()
+            api_key = api_key_entry.get().strip()
+            sender = sender_entry.get().strip()
+            
+            # Validate required fields
+            if provider != 'none':
+                if not api_key:
+                    messagebox.showerror("Error", "API Key is required when SMS provider is configured!")
+                    return
+                if not sender:
+                    messagebox.showerror("Error", "Sender Number/ID is required when SMS provider is configured!")
+                    return
+            
+            self.save_setting('sms_provider', provider)
+            self.save_setting('sms_api_key', api_key)
+            self.save_setting('sms_api_secret', api_secret_entry.get().strip())
+            self.save_setting('sms_sender_number', sender)
+            messagebox.showinfo("Success", "SMS settings saved successfully!\nYou can now send SMS from the SMS panel.")
         
         GlassButton(form_frame, text=tr('save'), command=save_sms).pack(pady=20)
+        
+        # Help text
+        help_text = ctk.CTkTextbox(
+            form_frame,
+            fg_color=COLORS['surface'],
+            text_color=COLORS['text'],
+            height=150,
+            width=400
+        )
+        help_text.pack(pady=10)
+        help_text.insert('1.0', """SMS Configuration Guide:
+
+1. Select your SMS provider (Twilio, Kavenegar, or Ghasedak)
+2. Enter your API Key from the provider's dashboard
+3. Enter API Secret (if required by provider)
+4. Enter your Sender Number or Sender ID
+5. Click Save
+
+Important Notes:
+- All fields marked with * are required
+- Provider must not be 'none' to send SMS
+- You must have an active account with the selected provider
+- SMS will not be sent until configuration is complete
+- Test your configuration by sending a manual SMS from SMS panel
+        """)
+        help_text.configure(state='disabled')
     
     def setup_backup_tab(self):
         """Setup backup and restore"""
