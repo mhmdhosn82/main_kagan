@@ -135,10 +135,11 @@ def test_sms_history_logged():
     if history:
         sms_record = history[0]
         print(f"   Customer ID: {sms_record['customer_id']}")
-        print(f"   Phone: {sms_record['phone_number']}")
+        print(f"   Phone: [REDACTED]")
         print(f"   Status: {sms_record['status']}")
         print(f"   Error: {sms_record['error_message']}")
         assert sms_record['status'] == 'not_configured', "Status should be 'not_configured'"
+        assert sms_record['phone_number'] == '9999999999', "Phone number should match test data"
         print("   ✓ Failed SMS attempt logged correctly")
     else:
         print("   ✗ No history found!")
