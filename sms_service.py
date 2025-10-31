@@ -201,7 +201,7 @@ class SMSService:
             self.send_survey_sms(service['customer_id'])
         
         # Send birthday SMS
-        today_birthday = now.strftime('%%-%m-%d')
+        today_birthday = f"%-{now.month:02d}-{now.day:02d}"
         birthdays = db.fetchall(
             """SELECT id FROM customers 
                WHERE birthdate LIKE ?

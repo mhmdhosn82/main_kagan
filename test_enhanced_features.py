@@ -49,7 +49,8 @@ def test_database():
     
     for setting in settings[:5]:  # Show first 5
         print(f"    - {setting['key']}: {setting['value']}")
-    print(f"    ... and {len(settings) - 5} more")
+    if len(settings) > 5:
+        print(f"    ... and {len(settings) - 5} more")
     
     return True
 
