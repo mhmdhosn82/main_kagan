@@ -24,39 +24,46 @@ COLORS = {
 class GlassFrame(ctk.CTkFrame):
     """Custom frame with glassmorphism effect"""
     def __init__(self, master, **kwargs):
-        super().__init__(
-            master,
-            fg_color=COLORS['glass'],
-            corner_radius=15,
-            border_width=1,
-            border_color=COLORS['border'],
-            **kwargs
-        )
+        # Set defaults only if not provided in kwargs
+        if 'fg_color' not in kwargs:
+            kwargs['fg_color'] = COLORS['glass']
+        if 'corner_radius' not in kwargs:
+            kwargs['corner_radius'] = 15
+        if 'border_width' not in kwargs:
+            kwargs['border_width'] = 1
+        if 'border_color' not in kwargs:
+            kwargs['border_color'] = COLORS['border']
+        super().__init__(master, **kwargs)
 
 class GlassButton(ctk.CTkButton):
     """Custom button with glassmorphism effect"""
     def __init__(self, master, **kwargs):
-        super().__init__(
-            master,
-            corner_radius=10,
-            fg_color=COLORS['primary'],
-            hover_color=COLORS['secondary'],
-            border_width=1,
-            border_color=COLORS['border'],
-            **kwargs
-        )
+        # Set defaults only if not provided in kwargs
+        if 'corner_radius' not in kwargs:
+            kwargs['corner_radius'] = 10
+        if 'fg_color' not in kwargs:
+            kwargs['fg_color'] = COLORS['primary']
+        if 'hover_color' not in kwargs:
+            kwargs['hover_color'] = COLORS['secondary']
+        if 'border_width' not in kwargs:
+            kwargs['border_width'] = 1
+        if 'border_color' not in kwargs:
+            kwargs['border_color'] = COLORS['border']
+        super().__init__(master, **kwargs)
 
 class GlassEntry(ctk.CTkEntry):
     """Custom entry with glassmorphism effect"""
     def __init__(self, master, **kwargs):
-        super().__init__(
-            master,
-            corner_radius=10,
-            fg_color=COLORS['surface'],
-            border_color=COLORS['border'],
-            text_color=COLORS['text'],
-            **kwargs
-        )
+        # Set defaults only if not provided in kwargs
+        if 'corner_radius' not in kwargs:
+            kwargs['corner_radius'] = 10
+        if 'fg_color' not in kwargs:
+            kwargs['fg_color'] = COLORS['surface']
+        if 'border_color' not in kwargs:
+            kwargs['border_color'] = COLORS['border']
+        if 'text_color' not in kwargs:
+            kwargs['text_color'] = COLORS['text']
+        super().__init__(master, **kwargs)
 
 class GlassLabel(ctk.CTkLabel):
     """Custom label for glassmorphism UI"""
@@ -71,26 +78,67 @@ class GlassLabel(ctk.CTkLabel):
 class GlassScrollableFrame(ctk.CTkScrollableFrame):
     """Custom scrollable frame with glassmorphism effect"""
     def __init__(self, master, **kwargs):
-        super().__init__(
-            master,
-            fg_color=COLORS['glass'],
-            corner_radius=15,
-            border_width=1,
-            border_color=COLORS['border'],
-            **kwargs
-        )
+        # Set defaults only if not provided in kwargs
+        if 'fg_color' not in kwargs:
+            kwargs['fg_color'] = COLORS['glass']
+        if 'corner_radius' not in kwargs:
+            kwargs['corner_radius'] = 15
+        if 'border_width' not in kwargs:
+            kwargs['border_width'] = 1
+        if 'border_color' not in kwargs:
+            kwargs['border_color'] = COLORS['border']
+        super().__init__(master, **kwargs)
 
 
 def setup_vazir_font():
     """Setup Vazir font for Persian text support"""
-    # For now, we'll use system fonts
-    # In production, you would download and install Vazir font
+    import os
+    from tkinter import font as tkfont
+    
+    # Get the fonts directory path
+    fonts_dir = os.path.join(os.path.dirname(__file__), 'fonts')
+    
+    # Define font file paths
+    font_files = {
+        'regular': os.path.join(fonts_dir, 'Vazir-Regular.ttf'),
+        'bold': os.path.join(fonts_dir, 'Vazir-Bold.ttf'),
+        'medium': os.path.join(fonts_dir, 'Vazir-Medium.ttf'),
+        'light': os.path.join(fonts_dir, 'Vazir-Light.ttf'),
+    }
+    
+    # Try to load Vazir font
+    font_family = 'Vazir'
+    
+    # Check if font files exist
+    if all(os.path.exists(f) for f in font_files.values()):
+        try:
+            # On some systems, we need to register the font
+            # Try to use PIL/Pillow to register fonts
+            try:
+                from PIL import ImageFont
+                for font_file in font_files.values():
+                    # This helps register the font on some systems
+                    ImageFont.truetype(font_file, 12)
+            except (ImportError, Exception):
+                pass
+            
+            # For customtkinter, we can use the font family name directly
+            # The font will be loaded from the system if registered, or we use the path
+            font_family = 'Vazir'
+        except Exception as e:
+            print(f"Warning: Could not load Vazir font: {e}")
+            font_family = 'Arial'  # Fallback to Arial
+    else:
+        print("Warning: Vazir font files not found, using Arial as fallback")
+        font_family = 'Arial'
+    
+    # Return font configurations for different text styles
     return {
-        'title': ('Arial', 24, 'bold'),
-        'heading': ('Arial', 18, 'bold'),
-        'subheading': ('Arial', 14, 'bold'),
-        'body': ('Arial', 12),
-        'small': ('Arial', 10)
+        'title': (font_family, 24, 'bold'),
+        'heading': (font_family, 18, 'bold'),
+        'subheading': (font_family, 14, 'bold'),
+        'body': (font_family, 12),
+        'small': (font_family, 10)
     }
 
 FONTS = setup_vazir_font()
