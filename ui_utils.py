@@ -31,14 +31,15 @@ def _set_default_kwargs(kwargs, defaults):
     Helper function to set default kwargs only if not already provided.
     
     Modifies kwargs dictionary in place by adding default values for any
-    keys not already present.
+    keys not already present. The dictionary is returned for convenience
+    but is the same object that was passed in (modified in place).
     
     Args:
         kwargs: Dictionary of keyword arguments to modify
         defaults: Dictionary of default values to apply
         
     Returns:
-        The modified kwargs dictionary (same object, modified in place)
+        The same kwargs dictionary (modified in place) for convenience
     """
     for key, value in defaults.items():
         if key not in kwargs:
@@ -120,20 +121,16 @@ def setup_vazir_font():
     # Check if font files exist
     if all(os.path.exists(f) for f in font_files.values()):
         try:
-            # On some systems, we need to register the font
-            # Try to use PIL/Pillow to register fonts
+            # Try to pre-register fonts using PIL/Pillow if available
+            # The font objects are loaded and discarded - this is intentional as
+            # it helps register the fonts with the system on some platforms
             if ImageFont is not None:
                 try:
                     for font_file in font_files.values():
-                        # This helps register the font on some systems
                         ImageFont.truetype(font_file, 12)
                 except OSError as e:
                     # Font loading failed but we can still try to use the font family name
                     print(f"Note: Could not pre-load font file: {e}")
-            
-            # For customtkinter, we can use the font family name directly
-            # The font will be loaded from the system if registered, or we use the path
-            font_family = 'Vazir'
         except OSError as e:
             print(f"Warning: Could not load Vazir font: {e}")
             font_family = 'Arial'  # Fallback to Arial

@@ -76,7 +76,9 @@ def test_ui_utils_imports():
         return False
     
     print("   Checking GlassFrame...")
-    glass_frame_section = content[content.find('class GlassFrame'):content.find('class GlassFrame')+500]
+    glass_frame_start = content.find('class GlassFrame')
+    glass_frame_end = content.find('class GlassButton', glass_frame_start)
+    glass_frame_section = content[glass_frame_start:glass_frame_end]
     if "_set_default_kwargs(kwargs, defaults)" in glass_frame_section:
         print("     ✓ Using _set_default_kwargs helper")
     else:
@@ -84,7 +86,9 @@ def test_ui_utils_imports():
         return False
     
     print("   Checking GlassButton...")
-    glass_button_section = content[content.find('class GlassButton'):content.find('class GlassButton')+500]
+    glass_button_start = content.find('class GlassButton')
+    glass_button_end = content.find('class GlassEntry', glass_button_start)
+    glass_button_section = content[glass_button_start:glass_button_end]
     if "_set_default_kwargs(kwargs, defaults)" in glass_button_section:
         print("     ✓ Using _set_default_kwargs helper")
     else:
@@ -92,7 +96,9 @@ def test_ui_utils_imports():
         return False
     
     print("   Checking GlassEntry...")
-    glass_entry_section = content[content.find('class GlassEntry'):content.find('class GlassEntry')+500]
+    glass_entry_start = content.find('class GlassEntry')
+    glass_entry_end = content.find('class GlassLabel', glass_entry_start)
+    glass_entry_section = content[glass_entry_start:glass_entry_end]
     if "_set_default_kwargs(kwargs, defaults)" in glass_entry_section:
         print("     ✓ Using _set_default_kwargs helper")
     else:
@@ -100,7 +106,12 @@ def test_ui_utils_imports():
         return False
     
     print("   Checking GlassScrollableFrame...")
-    glass_scroll_section = content[content.find('class GlassScrollableFrame'):content.find('class GlassScrollableFrame')+500]
+    glass_scroll_start = content.find('class GlassScrollableFrame')
+    # Find next def or class, whichever comes first
+    next_def = content.find('\ndef ', glass_scroll_start)
+    next_class = content.find('\nclass ', glass_scroll_start + 1)
+    glass_scroll_end = min(next_def, next_class) if next_def > 0 and next_class > 0 else max(next_def, next_class)
+    glass_scroll_section = content[glass_scroll_start:glass_scroll_end]
     if "_set_default_kwargs(kwargs, defaults)" in glass_scroll_section:
         print("     ✓ Using _set_default_kwargs helper")
     else:
