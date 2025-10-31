@@ -68,39 +68,43 @@ def test_ui_utils_imports():
     print("\n4. Testing Glass* classes for kwargs fix...")
     # Verify that the fix for "multiple values for keyword argument" is in place
     
-    print("   Checking GlassFrame...")
-    if "if 'fg_color' not in kwargs:" in content:
-        print("     ✓ Conditional fg_color setting implemented")
+    # Check for helper function
+    if "def _set_default_kwargs" in content:
+        print("   ✓ Helper function _set_default_kwargs implemented")
     else:
-        print("     ✗ Missing conditional fg_color setting")
+        print("   ✗ Missing helper function")
+        return False
+    
+    print("   Checking GlassFrame...")
+    glass_frame_section = content[content.find('class GlassFrame'):content.find('class GlassFrame')+500]
+    if "_set_default_kwargs(kwargs, defaults)" in glass_frame_section:
+        print("     ✓ Using _set_default_kwargs helper")
+    else:
+        print("     ✗ Not using helper function properly")
         return False
     
     print("   Checking GlassButton...")
-    glass_button_start = content.find('class GlassButton')
-    glass_button_section = content[glass_button_start:glass_button_start+1000]
-    if "if 'fg_color' not in kwargs:" in glass_button_section and \
-       "if 'hover_color' not in kwargs:" in glass_button_section:
-        print("     ✓ Conditional parameter setting implemented")
+    glass_button_section = content[content.find('class GlassButton'):content.find('class GlassButton')+500]
+    if "_set_default_kwargs(kwargs, defaults)" in glass_button_section:
+        print("     ✓ Using _set_default_kwargs helper")
     else:
-        print("     ✗ Missing conditional parameter setting")
+        print("     ✗ Not using helper function properly")
         return False
     
     print("   Checking GlassEntry...")
-    glass_entry_start = content.find('class GlassEntry')
-    glass_entry_section = content[glass_entry_start:glass_entry_start+1000]
-    if "if 'text_color' not in kwargs:" in glass_entry_section:
-        print("     ✓ Conditional text_color setting implemented")
+    glass_entry_section = content[content.find('class GlassEntry'):content.find('class GlassEntry')+500]
+    if "_set_default_kwargs(kwargs, defaults)" in glass_entry_section:
+        print("     ✓ Using _set_default_kwargs helper")
     else:
-        print("     ✗ Missing conditional text_color setting")
+        print("     ✗ Not using helper function properly")
         return False
     
     print("   Checking GlassScrollableFrame...")
-    glass_scroll_start = content.find('class GlassScrollableFrame')
-    glass_scroll_section = content[glass_scroll_start:glass_scroll_start+1000]
-    if "if 'border_width' not in kwargs:" in glass_scroll_section:
-        print("     ✓ Conditional border_width setting implemented")
+    glass_scroll_section = content[content.find('class GlassScrollableFrame'):content.find('class GlassScrollableFrame')+500]
+    if "_set_default_kwargs(kwargs, defaults)" in glass_scroll_section:
+        print("     ✓ Using _set_default_kwargs helper")
     else:
-        print("     ✗ Missing conditional border_width setting")
+        print("     ✗ Not using helper function properly")
         return False
     
     print("\n5. Testing font files...")
