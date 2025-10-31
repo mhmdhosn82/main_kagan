@@ -40,37 +40,42 @@ class SMSSection:
         
         # Check SMS configuration status
         from sms_service import sms_service
-        is_configured = sms_service.is_configured()
         
-        if not is_configured:
-            # Show warning if not configured
-            warning_frame = GlassFrame(tab)
-            warning_frame.pack(fill='x', padx=10, pady=10)
-            
-            GlassLabel(
-                warning_frame,
-                text="⚠️ SMS Not Configured",
-                font=FONTS['heading'],
-                text_color=COLORS['error']
-            ).pack(pady=10)
-            
-            GlassLabel(
-                warning_frame,
-                text="SMS API is not configured. Please configure SMS settings before sending SMS.",
-                font=FONTS['normal']
-            ).pack(pady=5)
-            
-            def open_settings():
-                # This would need to navigate to settings tab
-                messagebox.showinfo("Info", "Please go to Settings > SMS Configuration to configure SMS API")
-            
-            GlassButton(
-                warning_frame,
-                text="Go to SMS Settings",
-                command=open_settings,
-                fg_color=COLORS['primary'],
-                width=200
-            ).pack(pady=20)
+        def check_and_show_warning():
+            """Check configuration and show warning if not configured"""
+            is_configured = sms_service.is_configured()
+            if not is_configured:
+                # Show warning if not configured
+                warning_frame = GlassFrame(tab)
+                warning_frame.pack(fill='x', padx=10, pady=10)
+                
+                GlassLabel(
+                    warning_frame,
+                    text="⚠️ SMS Not Configured",
+                    font=FONTS['heading'],
+                    text_color=COLORS['error']
+                ).pack(pady=10)
+                
+                GlassLabel(
+                    warning_frame,
+                    text="SMS API is not configured. Please configure SMS settings before sending SMS.",
+                    font=FONTS['normal']
+                ).pack(pady=5)
+                
+                def open_settings():
+                    # This would need to navigate to settings tab
+                    messagebox.showinfo("Info", "Please go to Settings > SMS Configuration to configure SMS API")
+                
+                GlassButton(
+                    warning_frame,
+                    text="Go to SMS Settings",
+                    command=open_settings,
+                    fg_color=COLORS['primary'],
+                    width=200
+                ).pack(pady=20)
+            return is_configured
+        
+        check_and_show_warning()
         
         form_frame = GlassFrame(tab)
         form_frame.pack(fill='x', padx=10, pady=10)

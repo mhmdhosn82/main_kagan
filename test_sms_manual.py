@@ -90,7 +90,7 @@ def test_sms_configured_properly():
     # Verify settings are loaded
     print(f"\n2. Loaded settings:")
     print(f"   Provider: {sms.provider}")
-    print(f"   API Key: {sms.api_key[:10]}... (truncated)")
+    print(f"   API Key: [REDACTED]")
     print(f"   Sender: {sms.sender_number}")
     assert sms.provider == 'twilio', "Provider should be 'twilio'"
     assert sms.api_key == 'test_api_key_12345', "API key should match"

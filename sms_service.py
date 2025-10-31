@@ -36,12 +36,6 @@ class SMSService:
             self.log_sms(customer_id, phone_number, message, sms_type, 'not_configured', error_message)
             return {'success': False, 'message': error_message}
         
-        # Validate that API key is set
-        if not self.api_key or self.api_key == '':
-            error_message = 'SMS API Key is not configured. Please set your API Key in Settings > SMS Configuration.'
-            self.log_sms(customer_id, phone_number, message, sms_type, 'no_api_key', error_message)
-            return {'success': False, 'message': error_message}
-        
         try:
             # Send via appropriate provider
             if self.provider == 'twilio':
