@@ -38,6 +38,40 @@ class SMSSection:
         """Setup manual SMS sending interface"""
         tab = self.tabview.tab(tr('manual_sms'))
         
+        # Check SMS configuration status
+        from sms_service import sms_service
+        is_configured = sms_service.is_configured()
+        
+        if not is_configured:
+            # Show warning if not configured
+            warning_frame = GlassFrame(tab)
+            warning_frame.pack(fill='x', padx=10, pady=10)
+            
+            GlassLabel(
+                warning_frame,
+                text="⚠️ SMS Not Configured",
+                font=FONTS['heading'],
+                text_color=COLORS['error']
+            ).pack(pady=10)
+            
+            GlassLabel(
+                warning_frame,
+                text="SMS API is not configured. Please configure SMS settings before sending SMS.",
+                font=FONTS['normal']
+            ).pack(pady=5)
+            
+            def open_settings():
+                # This would need to navigate to settings tab
+                messagebox.showinfo("Info", "Please go to Settings > SMS Configuration to configure SMS API")
+            
+            GlassButton(
+                warning_frame,
+                text="Go to SMS Settings",
+                command=open_settings,
+                fg_color=COLORS['primary'],
+                width=200
+            ).pack(pady=20)
+        
         form_frame = GlassFrame(tab)
         form_frame.pack(fill='x', padx=10, pady=10)
         
@@ -121,6 +155,14 @@ class SMSSection:
         
         # Send button
         def send_sms():
+            # Check if SMS is configured
+            if not sms_service.is_configured():
+                messagebox.showerror(
+                    "SMS Not Configured",
+                    "SMS API is not configured. Please go to Settings > SMS Configuration to set up your SMS provider, API key, and sender number before sending SMS."
+                )
+                return
+            
             send_type = send_type_var.get()
             message = message_text.get('1.0', 'end-1c').strip()
             
@@ -143,7 +185,7 @@ class SMSSection:
                 if result['success']:
                     messagebox.showinfo("Success", "SMS sent successfully!")
                 else:
-                    messagebox.showwarning("Warning", f"SMS logged but not sent: {result['message']}")
+                    messagebox.showerror("Error", f"Failed to send SMS: {result['message']}")
             
             else:
                 # Get recipients based on type
@@ -166,15 +208,22 @@ class SMSSection:
                     messagebox.showinfo("Info", "No customers found for this criteria")
                     return
                 
+                # Confirm bulk send
+                if not messagebox.askyesno("Confirm", f"Send SMS to {len(customers)} customers?"):
+                    return
+                
                 # Send to all
                 sent_count = 0
+                failed_count = 0
                 for customer in customers:
                     result = sms_service.send_sms(customer['phone'], message, 'manual', customer['id'])
                     if result.get('success'):
                         sent_count += 1
+                    else:
+                        failed_count += 1
                 
-                messagebox.showinfo("Success", 
-                    f"SMS sent to {sent_count}/{len(customers)} customers")
+                messagebox.showinfo("Complete", 
+                    f"SMS sent to {sent_count} customers\nFailed: {failed_count}")
             
             # Refresh history
             self.refresh_history()
@@ -277,23 +326,31 @@ class SMSSection:
                 'failed': '✗',
                 'pending': '⏳',
                 'disabled': '⊝',
+                'not_configured': '⚙',
+                'no_api_key': '🔑',
                 'error': '⚠'
             }.get(sms['status'], '?')
             
             self.history_text.insert('end',
                 f"{status_color} {sms['sent_date']} | {customer_name} ({sms['phone_number']}) | "
                 f"Type: {sms['sms_type']} | Status: {sms['status']}\n"
-                f"   Message: {sms['message'][:80]}...\n\n"
+                f"   Message: {sms['message'][:80]}...\n"
             )
+            
+            # Show error message if present
+            if sms.get('error_message'):
+                self.history_text.insert('end', f"   Error: {sms['error_message']}\n")
+            
+            self.history_text.insert('end', '\n')
     
     def setup_automatic_tab(self):
-        """Setup automatic SMS configuration"""
+        """Setup manual campaign SMS interface (formerly automatic)"""
         tab = self.tabview.tab(tr('automatic_sms'))
         
         info_frame = GlassFrame(tab)
         info_frame.pack(fill='x', padx=10, pady=10)
         
-        GlassLabel(info_frame, text=tr('automatic_sms'), font=FONTS['heading']).pack(pady=10)
+        GlassLabel(info_frame, text="Campaign SMS (Manual)", font=FONTS['heading']).pack(pady=10)
         
         info_text = ctk.CTkTextbox(
             info_frame,
@@ -303,54 +360,140 @@ class SMSSection:
         )
         info_text.pack(fill='both', expand=True, padx=10, pady=10)
         
-        info_text.insert('1.0', """Automatic SMS Features:
+        info_text.insert('1.0', """Campaign SMS Features (All Manual):
 
-1. Survey SMS (24 hours after service)
-   - Sent automatically to customers 24 hours after receiving a service
+All SMS sending now requires explicit user action and proper API configuration.
+Automatic SMS sending has been removed for better control and cost management.
+
+Available Campaign Types:
+
+1. Survey SMS
+   - Send manually to customers after service
    - Requests feedback and rating
    - Helps improve service quality
 
 2. Birthday SMS
-   - Sent automatically on customer's birthday
+   - Send manually on customer's birthday
    - Includes special birthday wishes
    - Can include birthday discount codes
 
-3. Reactivation SMS (Monthly)
-   - Sent to customers who haven't visited in 30+ days
+3. Reactivation SMS
+   - Send manually to inactive customers
    - Encourages return visits
    - Can include special comeback offers
 
 4. Promotional SMS
-   - Sent manually to specific customer groups
+   - Send to specific customer groups
    - Used for special offers and campaigns
    - Customizable messages
 
-To enable automatic SMS:
-1. Go to Settings > SMS Configuration
-2. Configure your SMS provider (Twilio, Kavenegar, or Ghasedak)
-3. Enter your API credentials
-4. Automatic SMS will be sent based on customer activity
+How to Use:
+1. Configure SMS API in Settings > SMS Configuration
+2. Set provider, API key, and sender number
+3. Go to "Manual SMS" tab to send messages
+4. Select customer group or individual customer
+5. Choose template or write custom message
+6. Send SMS manually
 
-Note: SMS provider must be properly configured for automatic SMS to work.
+Important Notes:
+- SMS provider must be properly configured before sending
+- All SMS require explicit user action
+- No automatic scheduling or background sending
+- Check SMS history to track sent messages
 """)
         info_text.configure(state='disabled')
         
-        # Manual trigger buttons
+        # Manual campaign buttons
         actions_frame = GlassFrame(tab)
         actions_frame.pack(fill='x', padx=10, pady=10)
         
-        GlassLabel(actions_frame, text="Manual Triggers:", font=FONTS['subheading']).pack(pady=10)
+        GlassLabel(actions_frame, text="Quick Campaign Actions:", font=FONTS['subheading']).pack(pady=10)
         
-        def trigger_surveys():
-            sms_service.schedule_automatic_sms()
-            messagebox.showinfo("Success", "Automatic SMS check completed!")
-            self.refresh_history()
+        GlassLabel(
+            actions_frame,
+            text="Use these buttons to find and send campaign SMS to specific groups",
+            font=FONTS['small']
+        ).pack(pady=5)
+        
+        def send_birthday_campaigns():
+            from datetime import datetime
+            from sms_service import sms_service
+            
+            # Check if SMS is configured
+            if not sms_service.is_configured():
+                messagebox.showerror(
+                    "SMS Not Configured",
+                    "SMS API is not configured. Please go to Settings > SMS Configuration first."
+                )
+                return
+            
+            now = datetime.now()
+            today_birthday = f"%-{now.month:02d}-{now.day:02d}"
+            birthdays = db.fetchall(
+                """SELECT * FROM customers 
+                   WHERE birthdate LIKE ?""",
+                (today_birthday,)
+            )
+            
+            if not birthdays:
+                messagebox.showinfo("Info", "No birthdays today")
+                return
+            
+            if messagebox.askyesno("Confirm", f"Send birthday SMS to {len(birthdays)} customers?"):
+                sent = 0
+                for customer in birthdays:
+                    result = sms_service.send_birthday_sms(customer['id'])
+                    if result and result.get('success'):
+                        sent += 1
+                messagebox.showinfo("Complete", f"Birthday SMS sent to {sent} customers")
+                self.refresh_history()
+        
+        def send_reactivation_campaigns():
+            from datetime import datetime, timedelta
+            from sms_service import sms_service
+            
+            # Check if SMS is configured
+            if not sms_service.is_configured():
+                messagebox.showerror(
+                    "SMS Not Configured",
+                    "SMS API is not configured. Please go to Settings > SMS Configuration first."
+                )
+                return
+            
+            thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            inactive = db.fetchall(
+                """SELECT * FROM customers 
+                   WHERE last_visit_date < ?""",
+                (thirty_days_ago,)
+            )
+            
+            if not inactive:
+                messagebox.showinfo("Info", "No inactive customers found")
+                return
+            
+            if messagebox.askyesno("Confirm", f"Send reactivation SMS to {len(inactive)} customers?"):
+                sent = 0
+                for customer in inactive:
+                    result = sms_service.send_inactive_customer_sms(customer['id'])
+                    if result and result.get('success'):
+                        sent += 1
+                messagebox.showinfo("Complete", f"Reactivation SMS sent to {sent} customers")
+                self.refresh_history()
         
         GlassButton(
             actions_frame,
-            text="Check & Send Pending Automatic SMS",
-            command=trigger_surveys,
-            width=300
+            text="Send Birthday SMS (Today's Birthdays)",
+            command=send_birthday_campaigns,
+            width=300,
+            fg_color=COLORS['primary']
+        ).pack(pady=5)
+        
+        GlassButton(
+            actions_frame,
+            text="Send Reactivation SMS (Inactive 30+ Days)",
+            command=send_reactivation_campaigns,
+            width=300,
+            fg_color=COLORS['warning']
         ).pack(pady=5)
     
     def get_frame(self):

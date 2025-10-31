@@ -11,6 +11,7 @@ class SMSService:
         self.provider = self.get_setting('sms_provider', 'none')
         self.api_key = self.get_setting('sms_api_key', '')
         self.api_secret = self.get_setting('sms_api_secret', '')
+        self.sender_number = self.get_setting('sms_sender_number', '')
     
     def get_setting(self, key, default=''):
         """Get setting value from database"""
@@ -20,12 +21,26 @@ class SMSService:
         except:
             return default
     
+    def is_configured(self):
+        """Check if SMS service is properly configured"""
+        return (self.provider != 'none' and 
+                self.provider != '' and 
+                self.api_key != '' and 
+                self.api_key is not None)
+    
     def send_sms(self, phone_number, message, sms_type='manual', customer_id=None):
-        """Send SMS via configured provider"""
-        if self.provider == 'none':
-            # Log as pending but not sent
-            self.log_sms(customer_id, phone_number, message, sms_type, 'disabled')
-            return {'success': False, 'message': 'SMS provider not configured'}
+        """Send SMS via configured provider - requires proper API configuration"""
+        # Check if SMS is properly configured
+        if not self.is_configured():
+            error_message = 'SMS provider not configured. Please configure SMS API settings in Settings > SMS Configuration before sending SMS.'
+            self.log_sms(customer_id, phone_number, message, sms_type, 'not_configured', error_message)
+            return {'success': False, 'message': error_message}
+        
+        # Validate that API key is set
+        if not self.api_key or self.api_key == '':
+            error_message = 'SMS API Key is not configured. Please set your API Key in Settings > SMS Configuration.'
+            self.log_sms(customer_id, phone_number, message, sms_type, 'no_api_key', error_message)
+            return {'success': False, 'message': error_message}
         
         try:
             # Send via appropriate provider
@@ -115,10 +130,10 @@ class SMSService:
         )
     
     def send_survey_sms(self, customer_id):
-        """Send survey SMS 24 hours after service"""
+        """Send survey SMS manually (requires user action)"""
         customer = db.fetchone("SELECT * FROM customers WHERE id = ?", (customer_id,))
         if not customer:
-            return
+            return {'success': False, 'message': 'Customer not found'}
         
         message = f"""سلام {customer['name']} عزیز،
 از اینکه از خدمات ما استفاده کردید متشکریم.
@@ -129,10 +144,10 @@ class SMSService:
         return self.send_sms(customer['phone'], message, 'survey', customer_id)
     
     def send_birthday_sms(self, customer_id):
-        """Send birthday greeting SMS"""
+        """Send birthday greeting SMS manually (requires user action)"""
         customer = db.fetchone("SELECT * FROM customers WHERE id = ?", (customer_id,))
         if not customer:
-            return
+            return {'success': False, 'message': 'Customer not found'}
         
         message = f"""سلام {customer['name']} عزیز،
 تولدت مبارک! 🎉
@@ -143,10 +158,10 @@ class SMSService:
         return self.send_sms(customer['phone'], message, 'birthday', customer_id)
     
     def send_promotional_sms(self, customer_id, promotion_text):
-        """Send promotional SMS"""
+        """Send promotional SMS manually (requires user action)"""
         customer = db.fetchone("SELECT * FROM customers WHERE id = ?", (customer_id,))
         if not customer:
-            return
+            return {'success': False, 'message': 'Customer not found'}
         
         message = f"""سلام {customer['name']} عزیز،
 {promotion_text}
@@ -155,10 +170,10 @@ class SMSService:
         return self.send_sms(customer['phone'], message, 'promotional', customer_id)
     
     def send_inactive_customer_sms(self, customer_id):
-        """Send SMS to inactive customers"""
+        """Send SMS to inactive customers manually (requires user action)"""
         customer = db.fetchone("SELECT * FROM customers WHERE id = ?", (customer_id,))
         if not customer:
-            return
+            return {'success': False, 'message': 'Customer not found'}
         
         message = f"""سلام {customer['name']} عزیز،
 مدتی است که شما را در مجموعه کاگان نداشتیم و دلتنگ شما هستیم.
@@ -178,60 +193,6 @@ class SMSService:
                LIMIT ?""",
             (limit,)
         )
-    
-    def schedule_automatic_sms(self):
-        """Schedule and send automatic SMS (should be called periodically)"""
-        now = datetime.now()
-        
-        # Send survey SMS 24 hours after service
-        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
-        recent_services = db.fetchall(
-            """SELECT DISTINCT customer_id 
-               FROM salon_service_records 
-               WHERE DATE(service_date) = ?
-               AND customer_id NOT IN (
-                   SELECT customer_id FROM sms_history 
-                   WHERE sms_type = 'survey' 
-                   AND DATE(sent_date) = ?
-               )""",
-            (yesterday, now.strftime('%Y-%m-%d'))
-        )
-        
-        for service in recent_services:
-            self.send_survey_sms(service['customer_id'])
-        
-        # Send birthday SMS
-        today_birthday = f"%-{now.month:02d}-{now.day:02d}"
-        birthdays = db.fetchall(
-            """SELECT id FROM customers 
-               WHERE birthdate LIKE ?
-               AND id NOT IN (
-                   SELECT customer_id FROM sms_history 
-                   WHERE sms_type = 'birthday' 
-                   AND DATE(sent_date) = ?
-               )""",
-            (today_birthday, now.strftime('%Y-%m-%d'))
-        )
-        
-        for customer in birthdays:
-            self.send_birthday_sms(customer['id'])
-        
-        # Send reactivation SMS to inactive customers (monthly)
-        if now.day == 1:  # First day of month
-            thirty_days_ago = (now - timedelta(days=30)).strftime('%Y-%m-%d')
-            inactive_customers = db.fetchall(
-                """SELECT id FROM customers 
-                   WHERE last_visit_date < ?
-                   AND id NOT IN (
-                       SELECT customer_id FROM sms_history 
-                       WHERE sms_type = 'reactivation' 
-                       AND sent_date > ?
-                   )""",
-                (thirty_days_ago, thirty_days_ago)
-            )
-            
-            for customer in inactive_customers:
-                self.send_inactive_customer_sms(customer['id'])
 
 # Global SMS service instance
 sms_service = SMSService()
