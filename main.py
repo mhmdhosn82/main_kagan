@@ -70,6 +70,11 @@ class KaganManagementApp(ctk.CTk):
         
         # Show main window
         self.deiconify()
+        # Ensure window is visible and focused
+        self.lift()  # Bring window to top
+        self.focus_force()  # Force focus on the window
+        self.attributes('-topmost', True)  # Set as topmost temporarily
+        self.after(100, lambda: self.attributes('-topmost', False))  # Remove topmost after 100ms
     
     def on_login_success(self, user):
         """Handle successful login"""
