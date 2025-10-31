@@ -60,6 +60,7 @@ def test_dashboard_creation_with_invoices():
     print("\nTesting dashboard creation with invoices...")
     
     sections = {}
+    processed = []
     
     if 'dashboard' not in sections:
         dashboard = "MockDashboardFrame"
@@ -70,7 +71,6 @@ def test_dashboard_creation_with_invoices():
             {'id': 2, 'name': 'Customer 2', 'final_amount': 200.0, 'invoice_date': '2025-01-02'},
         ]
         
-        processed = []
         for inv in recent:
             processed.append(inv['id'])
         
