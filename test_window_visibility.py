@@ -15,6 +15,9 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Constants
+SEARCH_RANGE_LINES = 10  # Number of lines to search after deiconify
+
 
 def test_window_visibility_code_exists():
     """
@@ -64,15 +67,16 @@ def test_window_visibility_code_exists():
         return False
     print("✓ Found self.lift() after deiconify()")
     
-    # Check for focus_force() after deiconify
-    if 'self.focus_force()' not in after_deiconify:
-        # Check for alternative focus() method
-        if 'self.focus()' not in after_deiconify:
-            print("✗ FAILED: self.focus() or self.focus_force() not found after deiconify()")
-            return False
-        print("✓ Found self.focus() after deiconify()")
-    else:
-        print("✓ Found self.focus_force() after deiconify()")
+    # Check for focus_force() or focus() after deiconify
+    has_focus_force = 'self.focus_force()' in after_deiconify
+    has_focus = 'self.focus()' in after_deiconify
+    
+    if not has_focus_force and not has_focus:
+        print("✗ FAILED: self.focus() or self.focus_force() not found after deiconify()")
+        return False
+    
+    focus_method = 'self.focus_force()' if has_focus_force else 'self.focus()'
+    print(f"✓ Found {focus_method} after deiconify()")
     
     # Check for attributes('-topmost', True) after deiconify
     if "self.attributes('-topmost', True)" not in after_deiconify:
@@ -122,8 +126,8 @@ def test_window_visibility_sequence():
     focus_found = False
     topmost_found = False
     
-    # Look at the next 10 lines after deiconify
-    for i in range(deiconify_line + 1, min(deiconify_line + 11, len(lines))):
+    # Look at the next SEARCH_RANGE_LINES lines after deiconify
+    for i in range(deiconify_line + 1, min(deiconify_line + SEARCH_RANGE_LINES + 1, len(lines))):
         line = lines[i]
         if 'self.lift()' in line:
             lift_found = True
@@ -136,15 +140,15 @@ def test_window_visibility_sequence():
             print(f"✓ Found topmost attribute at line {i + 1} (after deiconify)")
     
     if not lift_found:
-        print("✗ FAILED: lift() not found within 10 lines after deiconify()")
+        print(f"✗ FAILED: lift() not found within {SEARCH_RANGE_LINES} lines after deiconify()")
         return False
     
     if not focus_found:
-        print("✗ FAILED: focus method not found within 10 lines after deiconify()")
+        print(f"✗ FAILED: focus method not found within {SEARCH_RANGE_LINES} lines after deiconify()")
         return False
     
     if not topmost_found:
-        print("✗ FAILED: topmost attribute not found within 10 lines after deiconify()")
+        print(f"✗ FAILED: topmost attribute not found within {SEARCH_RANGE_LINES} lines after deiconify()")
         return False
     
     return True
