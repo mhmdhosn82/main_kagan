@@ -21,7 +21,7 @@ import customtkinter as ctk
 from ui_utils import *
 from database import db
 from translations import tr, translator
-from app_logger import log_info, log_error, log_exception, log_debug, LOGS_DIR
+from app_logger import log_info, log_error, log_exception, log_debug, log_warning, LOGS_DIR
 
 # Import authentication
 from auth import LoginScreen, session
