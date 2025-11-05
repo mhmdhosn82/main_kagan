@@ -17,7 +17,7 @@ import customtkinter as ctk
 from ui_utils import *
 from database import db
 from translations import tr, translator
-from app_logger import log_info, log_error, log_exception, log_debug
+from app_logger import log_info, log_error, log_exception, log_debug, LOGS_DIR
 
 # Import authentication
 from auth import LoginScreen, session
@@ -575,7 +575,7 @@ def main():
         print("=" * 70)
         traceback.print_exc()
         print("=" * 70)
-        print("Please check the log file in the 'logs' directory for details")
+        print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
         print("=" * 70)
         import sys
         sys.exit(1)
