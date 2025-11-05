@@ -15,7 +15,9 @@ supplier management, expense tracking, and multi-user authentication.
 
 import sys
 import traceback
+
 import customtkinter as ctk
+
 from ui_utils import *
 from database import db
 from translations import tr, translator
