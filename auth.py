@@ -7,29 +7,37 @@ import hashlib
 from ui_utils import *
 from database import db
 from translations import tr, translator
+from app_logger import log_info, log_error, log_exception, log_debug
 
 class LoginScreen(ctk.CTkToplevel):
     """Login screen for authentication"""
     def __init__(self, parent, on_login_success):
-        super().__init__(parent)
-        
-        self.on_login_success = on_login_success
-        self.authenticated_user = None
-        
-        # Configure window
-        self.title(tr('login'))
-        self.geometry("400x500")
-        self.resizable(False, False)
-        
-        # Make it modal
-        self.transient(parent)
-        self.grab_set()
-        
-        # Center on screen
-        self.center_window()
-        
-        # Setup UI
-        self.setup_ui()
+        try:
+            log_info("Initializing login screen")
+            super().__init__(parent)
+            
+            self.on_login_success = on_login_success
+            self.authenticated_user = None
+            
+            # Configure window
+            self.title(tr('login'))
+            self.geometry("400x500")
+            self.resizable(False, False)
+            
+            # Make it modal
+            self.transient(parent)
+            self.grab_set()
+            
+            # Center on screen
+            self.center_window()
+            
+            # Setup UI
+            self.setup_ui()
+            log_info("Login screen initialized successfully")
+            
+        except Exception as e:
+            log_exception("Error initializing login screen", e)
+            raise
     
     def center_window(self):
         """Center the window on screen"""
@@ -136,36 +144,50 @@ class LoginScreen(ctk.CTkToplevel):
     
     def login(self):
         """Authenticate user"""
-        username = self.username_entry.get().strip()
-        password = self.password_entry.get().strip()
-        
-        if not username or not password:
-            self.error_label.configure(text=tr('login_failed'))
-            return
-        
-        # Hash password
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # Check credentials
-        user = db.fetchone(
-            """SELECT * FROM users 
-               WHERE username = ? AND password_hash = ? AND is_active = 1""",
-            (username, password_hash)
-        )
-        
-        if user:
-            # Update last login
-            from datetime import datetime
-            db.execute(
-                "UPDATE users SET last_login = ? WHERE id = ?",
-                (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), user['id'])
+        try:
+            log_debug("Login attempt started")
+            username = self.username_entry.get().strip()
+            password = self.password_entry.get().strip()
+            
+            if not username or not password:
+                log_warning("Login attempt with empty credentials")
+                self.error_label.configure(text=tr('login_failed'))
+                return
+            
+            log_debug(f"Attempting to authenticate user: {username}")
+            
+            # Hash password
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            # Check credentials
+            user = db.fetchone(
+                """SELECT * FROM users 
+                   WHERE username = ? AND password_hash = ? AND is_active = 1""",
+                (username, password_hash)
             )
             
-            self.authenticated_user = user
-            self.destroy()
-            self.on_login_success(user)
-        else:
-            self.error_label.configure(text=tr('login_failed'))
+            if user:
+                log_info(f"User '{username}' authenticated successfully")
+                # Update last login
+                from datetime import datetime
+                db.execute(
+                    "UPDATE users SET last_login = ? WHERE id = ?",
+                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), user['id'])
+                )
+                
+                self.authenticated_user = user
+                log_debug("Calling login success callback")
+                self.on_login_success(user)
+                log_debug("Destroying login window")
+                self.destroy()
+            else:
+                log_warning(f"Failed login attempt for user: {username}")
+                self.error_label.configure(text=tr('login_failed'))
+                self.password_entry.delete(0, 'end')
+                
+        except Exception as e:
+            log_exception("Error during login", e)
+            self.error_label.configure(text=f"Login error: {type(e).__name__}")
             self.password_entry.delete(0, 'end')
 
 class SessionManager:
