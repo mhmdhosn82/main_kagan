@@ -13,6 +13,8 @@ campaigns, comprehensive reporting, Persian RTL support, SMS panel, inventory ma
 supplier management, expense tracking, and multi-user authentication.
 """
 
+import sys
+import traceback
 import customtkinter as ctk
 from ui_utils import *
 from database import db
@@ -586,13 +588,11 @@ def main():
         print("=" * 70)
         print("UNHANDLED EXCEPTION")
         print("=" * 70)
-        import traceback
         traceback.print_exception(exc_type, exc_value, exc_traceback)
         print("=" * 70)
         print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
         print("=" * 70)
     
-    import sys
     sys.excepthook = handle_exception
     
     try:
@@ -608,7 +608,6 @@ def main():
             print("=" * 70)
             print("ERROR IN MAIN EVENT LOOP")
             print("=" * 70)
-            import traceback
             traceback.print_exc()
             print("=" * 70)
             print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
@@ -618,7 +617,6 @@ def main():
         log_info("Application closed normally")
     except Exception as e:
         log_exception("Fatal error in main", e)
-        import traceback
         print("=" * 70)
         print("FATAL ERROR - Application crashed")
         print("=" * 70)
@@ -626,7 +624,6 @@ def main():
         print("=" * 70)
         print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
         print("=" * 70)
-        import sys
         sys.exit(1)
 
 if __name__ == "__main__":
