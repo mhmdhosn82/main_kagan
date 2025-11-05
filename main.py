@@ -13,11 +13,15 @@ campaigns, comprehensive reporting, Persian RTL support, SMS panel, inventory ma
 supplier management, expense tracking, and multi-user authentication.
 """
 
+import sys
+import traceback
+
 import customtkinter as ctk
+
 from ui_utils import *
 from database import db
 from translations import tr, translator
-from app_logger import log_info, log_error, log_exception, log_debug, LOGS_DIR
+from app_logger import log_info, log_error, log_exception, log_debug, log_warning, LOGS_DIR
 
 # Import authentication
 from auth import LoginScreen, session
@@ -41,6 +45,9 @@ class KaganManagementApp(ctk.CTk):
         try:
             log_info("=== Starting Kagan Management Application ===")
             super().__init__()
+            
+            # Set up window close protocol handler to log close events
+            self.protocol("WM_DELETE_WINDOW", self.on_window_close)
             
             # Show login screen first
             log_info("Withdrawing main window and showing login screen")
@@ -97,6 +104,15 @@ class KaganManagementApp(ctk.CTk):
             self._show_error_dialog("Application Initialization Error", 
                                    f"Failed to start the application:\n{type(e).__name__}: {str(e)}\n\nPlease check the logs for details.")
             raise
+    
+    def on_window_close(self):
+        """Handle window close event"""
+        try:
+            log_info("Window close event triggered by user")
+            self.destroy()
+        except Exception as e:
+            log_exception("Error during window close", e)
+            self.destroy()
     
     def on_login_success(self, user):
         """Handle successful login"""
@@ -561,15 +577,48 @@ class KaganManagementApp(ctk.CTk):
 
 def main():
     """Main entry point"""
+    
+    # Install global exception handler
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        """Global exception handler to catch any unhandled exceptions"""
+        if issubclass(exc_type, KeyboardInterrupt):
+            # Allow keyboard interrupt to work normally
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+        
+        log_exception("Unhandled exception", exc_value)
+        print("=" * 70)
+        print("UNHANDLED EXCEPTION")
+        print("=" * 70)
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        print("=" * 70)
+        print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
+        print("=" * 70)
+    
+    sys.excepthook = handle_exception
+    
     try:
         log_info("Starting Kagan Management Software")
         app = KaganManagementApp()
         log_info("Entering main event loop")
-        app.mainloop()
+        
+        # Wrap mainloop in try-except to catch any exceptions during event processing
+        try:
+            app.mainloop()
+        except Exception as e:
+            log_exception("Error in main event loop", e)
+            print("=" * 70)
+            print("ERROR IN MAIN EVENT LOOP")
+            print("=" * 70)
+            traceback.print_exc()
+            print("=" * 70)
+            print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
+            print("=" * 70)
+            raise
+        
         log_info("Application closed normally")
     except Exception as e:
         log_exception("Fatal error in main", e)
-        import traceback
         print("=" * 70)
         print("FATAL ERROR - Application crashed")
         print("=" * 70)
@@ -577,7 +626,6 @@ def main():
         print("=" * 70)
         print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
         print("=" * 70)
-        import sys
         sys.exit(1)
 
 if __name__ == "__main__":
