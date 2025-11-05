@@ -42,6 +42,9 @@ class KaganManagementApp(ctk.CTk):
             log_info("=== Starting Kagan Management Application ===")
             super().__init__()
             
+            # Set up window close protocol handler to log close events
+            self.protocol("WM_DELETE_WINDOW", self.on_window_close)
+            
             # Show login screen first
             log_info("Withdrawing main window and showing login screen")
             self.withdraw()  # Hide main window
@@ -97,6 +100,15 @@ class KaganManagementApp(ctk.CTk):
             self._show_error_dialog("Application Initialization Error", 
                                    f"Failed to start the application:\n{type(e).__name__}: {str(e)}\n\nPlease check the logs for details.")
             raise
+    
+    def on_window_close(self):
+        """Handle window close event"""
+        try:
+            log_info("Window close event triggered by user")
+            self.destroy()
+        except Exception as e:
+            log_exception("Error during window close", e)
+            self.destroy()
     
     def on_login_success(self, user):
         """Handle successful login"""
@@ -561,11 +573,48 @@ class KaganManagementApp(ctk.CTk):
 
 def main():
     """Main entry point"""
+    
+    # Install global exception handler
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        """Global exception handler to catch any unhandled exceptions"""
+        if issubclass(exc_type, KeyboardInterrupt):
+            # Allow keyboard interrupt to work normally
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+        
+        log_exception("Unhandled exception", exc_value)
+        print("=" * 70)
+        print("UNHANDLED EXCEPTION")
+        print("=" * 70)
+        import traceback
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        print("=" * 70)
+        print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
+        print("=" * 70)
+    
+    import sys
+    sys.excepthook = handle_exception
+    
     try:
         log_info("Starting Kagan Management Software")
         app = KaganManagementApp()
         log_info("Entering main event loop")
-        app.mainloop()
+        
+        # Wrap mainloop in try-except to catch any exceptions during event processing
+        try:
+            app.mainloop()
+        except Exception as e:
+            log_exception("Error in main event loop", e)
+            print("=" * 70)
+            print("ERROR IN MAIN EVENT LOOP")
+            print("=" * 70)
+            import traceback
+            traceback.print_exc()
+            print("=" * 70)
+            print(f"Please check the log file in the '{LOGS_DIR}' directory for details")
+            print("=" * 70)
+            raise
+        
         log_info("Application closed normally")
     except Exception as e:
         log_exception("Fatal error in main", e)

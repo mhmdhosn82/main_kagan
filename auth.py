@@ -28,6 +28,9 @@ class LoginScreen(ctk.CTkToplevel):
             self.transient(parent)
             self.grab_set()
             
+            # Set up window close protocol handler
+            self.protocol("WM_DELETE_WINDOW", self.on_close)
+            
             # Center on screen
             self.center_window()
             
@@ -47,6 +50,15 @@ class LoginScreen(ctk.CTkToplevel):
         x = (self.winfo_screenwidth() // 2) - (width // 2)
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
+    
+    def on_close(self):
+        """Handle login window close event"""
+        try:
+            log_info("Login window closed by user without logging in")
+            self.destroy()
+        except Exception as e:
+            log_exception("Error closing login window", e)
+            self.destroy()
     
     def setup_ui(self):
         """Setup login UI"""
