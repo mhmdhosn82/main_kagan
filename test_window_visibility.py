@@ -78,17 +78,16 @@ def test_window_visibility_code_exists():
     focus_method = 'self.focus_force()' if has_focus_force else 'self.focus()'
     print(f"✓ Found {focus_method} after deiconify()")
     
-    # Check for attributes('-topmost', True) after deiconify
-    if "self.attributes('-topmost', True)" not in after_deiconify:
-        print("✗ FAILED: self.attributes('-topmost', True) not found after deiconify()")
-        return False
-    print("✓ Found self.attributes('-topmost', True) after deiconify()")
-    
-    # Check for after() to remove topmost
-    if 'self.after(' in after_deiconify and "'-topmost', False" in after_deiconify:
-        print("✓ Found self.after() to remove topmost attribute")
+    # Check for attributes('-topmost', True) after deiconify - now optional/commented
+    if "self.attributes('-topmost', True)" in after_deiconify:
+        print("✓ Found self.attributes('-topmost', True) after deiconify()")
+        # Check for after() to remove topmost
+        if 'self.after(' in after_deiconify and "'-topmost', False" in after_deiconify:
+            print("✓ Found self.after() to remove topmost attribute")
+        else:
+            print("⚠ WARNING: self.after() to remove topmost not found (optional)")
     else:
-        print("⚠ WARNING: self.after() to remove topmost not found (optional)")
+        print("✓ Topmost attributes are disabled/commented (prevents window instability)")
     
     return True
 
@@ -135,7 +134,7 @@ def test_window_visibility_sequence():
         if 'self.focus_force()' in line or 'self.focus()' in line:
             focus_found = True
             print(f"✓ Found focus method at line {i + 1} (after deiconify)")
-        if "self.attributes('-topmost', True)" in line:
+        if "self.attributes('-topmost', True)" in line and not line.strip().startswith('#'):
             topmost_found = True
             print(f"✓ Found topmost attribute at line {i + 1} (after deiconify)")
     
@@ -148,8 +147,7 @@ def test_window_visibility_sequence():
         return False
     
     if not topmost_found:
-        print(f"✗ FAILED: topmost attribute not found within {SEARCH_RANGE_LINES} lines after deiconify()")
-        return False
+        print(f"✓ Topmost attribute is disabled/commented (prevents window instability)")
     
     return True
 
@@ -169,9 +167,8 @@ if __name__ == '__main__':
         print("  1. Deiconify (make visible)")
         print("  2. Lift to top of window stack")
         print("  3. Force focus to the window")
-        print("  4. Set as topmost temporarily")
-        print("  5. Remove topmost flag after delay")
-        print("\nThis ensures the window is visible and focused after login.")
+        print("  (Topmost attributes disabled to prevent window instability)")
+        print("\nThis ensures the window is visible, focused, and stable after login.")
         sys.exit(0)
     else:
         print("✗ Some window visibility tests failed!")

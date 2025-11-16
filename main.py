@@ -163,8 +163,9 @@ class KaganManagementApp(ctk.CTk):
             # Ensure window is visible and focused
             self.lift()  # Bring window to top
             self.focus_force()  # Force focus on the window
-            self.attributes('-topmost', True)  # Set as topmost temporarily
-            self.after(100, lambda: self.attributes('-topmost', False))  # Remove topmost after 100ms
+            # Commented out topmost attributes as they cause window instability on some systems
+            # self.attributes('-topmost', True)  # Set as topmost temporarily
+            # self.after(100, lambda: self.attributes('-topmost', False))  # Remove topmost after 100ms
             print("Main window is now visible and focused")
             
             # Mark initialization as complete
