@@ -108,6 +108,9 @@ class SimpleLoginWindow(ctk.CTk):
 
 class KaganManagementApp(ctk.CTk):
     def __init__(self):
+        # Flag to track if initialization completed successfully
+        self.init_complete = False
+        
         try:
             print("=== Starting Kagan Management Application ===")
             super().__init__()
@@ -164,10 +167,15 @@ class KaganManagementApp(ctk.CTk):
             self.after(100, lambda: self.attributes('-topmost', False))  # Remove topmost after 100ms
             print("Main window is now visible and focused")
             
+            # Mark initialization as complete
+            self.init_complete = True
+            print("Application initialization completed successfully")
+            
         except Exception as e:
             print(f"Error during application initialization: {e}")
             self._show_error_dialog("Application Initialization Error", 
                                    f"Failed to start the application:\n{type(e).__name__}: {str(e)}\n\nPlease check the logs for details.")
+            self.init_complete = False
             raise
     
     def on_window_close(self):
@@ -625,6 +633,13 @@ def main():
     try:
         print("Starting Kagan Management Software")
         app = KaganManagementApp()
+        
+        # Only start mainloop if initialization completed successfully
+        if not hasattr(app, 'init_complete') or not app.init_complete:
+            print("Application initialization did not complete successfully")
+            print("Exiting application")
+            return
+        
         print("Entering main event loop")
         
         # Wrap mainloop in try-except to catch any exceptions during event processing
