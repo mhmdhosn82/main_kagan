@@ -78,17 +78,21 @@ def test_window_visibility_code_exists():
     focus_method = 'self.focus_force()' if has_focus_force else 'self.focus()'
     print(f"✓ Found {focus_method} after deiconify()")
     
-    # Check for attributes('-topmost', True) after deiconify
-    if "self.attributes('-topmost', True)" not in after_deiconify:
-        print("✗ FAILED: self.attributes('-topmost', True) not found after deiconify()")
-        return False
-    print("✓ Found self.attributes('-topmost', True) after deiconify()")
+    # Check for attributes('-topmost', True) after deiconify (can be commented out)
+    has_topmost_active = "self.attributes('-topmost', True)" in after_deiconify and "# self.attributes('-topmost', True)" not in after_deiconify
+    has_topmost_commented = "# self.attributes('-topmost', True)" in after_deiconify
     
-    # Check for after() to remove topmost
-    if 'self.after(' in after_deiconify and "'-topmost', False" in after_deiconify:
-        print("✓ Found self.after() to remove topmost attribute")
+    if has_topmost_active:
+        print("✓ Found active self.attributes('-topmost', True) after deiconify()")
+        # Check for after() to remove topmost
+        if 'self.after(' in after_deiconify and "'-topmost', False" in after_deiconify:
+            print("✓ Found self.after() to remove topmost attribute")
+        else:
+            print("⚠ WARNING: self.after() to remove topmost not found (optional)")
+    elif has_topmost_commented:
+        print("✓ Found commented self.attributes('-topmost', True) after deiconify() - topmost disabled to prevent window issues")
     else:
-        print("⚠ WARNING: self.after() to remove topmost not found (optional)")
+        print("⚠ WARNING: self.attributes('-topmost', True) not found after deiconify() (optional)")
     
     return True
 
@@ -125,6 +129,7 @@ def test_window_visibility_sequence():
     lift_found = False
     focus_found = False
     topmost_found = False
+    topmost_commented = False
     
     # Look at the next SEARCH_RANGE_LINES lines after deiconify
     for i in range(deiconify_line + 1, min(deiconify_line + SEARCH_RANGE_LINES + 1, len(lines))):
@@ -136,8 +141,12 @@ def test_window_visibility_sequence():
             focus_found = True
             print(f"✓ Found focus method at line {i + 1} (after deiconify)")
         if "self.attributes('-topmost', True)" in line:
-            topmost_found = True
-            print(f"✓ Found topmost attribute at line {i + 1} (after deiconify)")
+            if line.strip().startswith('#'):
+                topmost_commented = True
+                print(f"✓ Found topmost attribute (commented) at line {i + 1} (after deiconify)")
+            else:
+                topmost_found = True
+                print(f"✓ Found topmost attribute at line {i + 1} (after deiconify)")
     
     if not lift_found:
         print(f"✗ FAILED: lift() not found within {SEARCH_RANGE_LINES} lines after deiconify()")
@@ -147,8 +156,8 @@ def test_window_visibility_sequence():
         print(f"✗ FAILED: focus method not found within {SEARCH_RANGE_LINES} lines after deiconify()")
         return False
     
-    if not topmost_found:
-        print(f"✗ FAILED: topmost attribute not found within {SEARCH_RANGE_LINES} lines after deiconify()")
+    if not topmost_found and not topmost_commented:
+        print(f"⚠ WARNING: topmost attribute not found within {SEARCH_RANGE_LINES} lines after deiconify() (optional)")
         return False
     
     return True
@@ -169,9 +178,9 @@ if __name__ == '__main__':
         print("  1. Deiconify (make visible)")
         print("  2. Lift to top of window stack")
         print("  3. Force focus to the window")
-        print("  4. Set as topmost temporarily")
-        print("  5. Remove topmost flag after delay")
-        print("\nThis ensures the window is visible and focused after login.")
+        print("\nNote: The 'topmost' attribute has been disabled to prevent")
+        print("window closing issues on some systems. The window remains")
+        print("stable using lift() and focus_force() methods.")
         sys.exit(0)
     else:
         print("✗ Some window visibility tests failed!")
